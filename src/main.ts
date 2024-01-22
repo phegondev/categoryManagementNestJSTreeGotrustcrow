@@ -3,6 +3,8 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await app.listen(3000);
+  AppModule.configureSwagger(app); // Call configureSwagger method
+  await app.listen(4040);
 }
+
 bootstrap();
