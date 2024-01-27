@@ -11,6 +11,7 @@ export class CategoryService {
     constructor(@InjectRepository(Category) private readonly categoryRepository: TreeRepository<Category>) { }
 
 
+
     /* This is the Method to add a category */
     async addCategory(category: Category, parentId?: number): Promise<any> {
         try {
@@ -123,13 +124,13 @@ export class CategoryService {
                 where: { id },
             } as FindOneOptions<Category>);
 
-            category.children = await this.getAllDescendantsRecursiveWellStructured(category);
+            let cat = await this.categoryRepository.findDescendantsTree(category);
 
             return {
                 statusCode: HttpStatus.OK,
                 message: 'Category and all descendants found.',
                 error: null,
-                data: category,
+                data: cat,
             };
         } catch (error) {
             if (error.name === 'EntityNotFoundError') {
@@ -181,7 +182,7 @@ export class CategoryService {
 
             // Check if moving the subtree would create an invalid category structure
             if (await this.isDescendantOf(destinationParent, sourceCategory)) {
-                throw new BadRequestException('Invalid category structure. Cannot move a node to its descendant.');
+                throw new BadRequestException('Invalid category structure. Cannot move node to its descendant.');
             }
 
             sourceCategory.parent = destinationParent;
@@ -215,8 +216,10 @@ export class CategoryService {
     private async removeDescendantsRecursive(category: Category): Promise<void> {
         const descendants = await this.categoryRepository.findDescendantsTree(category);
 
-        if (descendants && descendants.children) {
+        if (descendants && descendants.children.length > 0) {
             await this.removeDescendantsTree(descendants);
+        } else {
+            await this.categoryRepository.remove(category);
         }
     }
 
@@ -229,30 +232,6 @@ export class CategoryService {
         }
         await this.categoryRepository.remove(category);
     }
-
-
-    private async getAllDescendantsRecursiveWellStructured(category: Category): Promise<Category[]> {
-        if (!category.id) {
-            return [];
-        }
-        const descendants: Category[] = [];
-        const children = await this.categoryRepository.find({
-            where: { parent: category },
-            relations: ['children'],
-        });
-        for (const child of children) {
-            const childWithDescendants = await this.categoryRepository.findOneOrFail({
-                where: { id: child.id },
-                relations: ['children'],
-            } as FindOneOptions<Category>);
-
-            childWithDescendants.children = await this.getAllDescendantsRecursive(childWithDescendants);
-
-            descendants.push(childWithDescendants);
-        }
-        return descendants;
-    }
-
 
 
     async getAllDescendantsRecursive(category: Category, visited: Set<number> = new Set()): Promise<Category[]> {
