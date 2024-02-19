@@ -1,4 +1,4 @@
-# Category Management Ststem In NestJS For GoTrustCrow
+# TREE DB STRUCTURE EXAMPLE IN NEST.JS
 ## STEPS TO SET UP THE PROJECT
 
 ### 1 clone the porject 
